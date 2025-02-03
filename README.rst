@@ -25,16 +25,8 @@ Use this template to create a repository on your account and start the developme
 Authors
 =======
 
-* First Author  (myemail@xxx.org)
-* Other author (myotheremail@xxx.org)
-
-.. if needed use this field
-
-    Contributors
-    ============
-
-    * First Contributor
-    * Other Contributors
+* Malo Hervé  (malo.herve@epfl.ch)
+* Martin Luttmann (martin.luttmann@epfl.ch)
 
 .. if needed use this field
 
