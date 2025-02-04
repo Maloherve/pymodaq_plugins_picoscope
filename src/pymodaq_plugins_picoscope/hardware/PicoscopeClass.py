@@ -115,14 +115,14 @@ class Picoscope():
         handle = self.chandle
         enabled = 1
         source = PS4000a_CHANNEL_B
-        source = PS4000A_TRIGGER_AUX = 9
         threshold = mV2adc(self.trigger_threshold, self.chBRange, self.maxADC)
         direction = PS4000a_RISING = 2
         delay = 0 # s
-        autoTrigger_ms = 0 # ms  #TODO: Autotriggers after some time ?
+        autoTrigger_ms = 0 # ms 
         self.status["trigger"] = ps.ps4000aSetSimpleTrigger(handle, enabled, source, threshold, direction, delay, autoTrigger_ms )
         assert_pico_ok(self.status["trigger"])
 
+        print(self.status)
         # ----- Setup Timebase
         handle = self.chandle
         self.timebase = self.timebase
@@ -165,7 +165,6 @@ class Picoscope():
 
         self.status["setDataBufferA"] = ps.ps4000aSetDataBuffer(handle, PS4000A_CHANNEL_A, ctypes.byref(self.bufferA), bufferLength, 0, mode)
         self.status["setDataBufferB"] = ps.ps4000aSetDataBuffer(handle, PS4000A_CHANNEL_B, ctypes.byref(self.bufferB), bufferLength, 0, mode)
-
 
 
     def get_data(self):
@@ -230,8 +229,7 @@ class Picoscope():
 
 
 
-# pico = Picoscope()
-# psdata = pico.get_data()
-# print(len(psdata[2]) )
-# plt.plot(psdata[0], psdata[2])
-# plt.show()
+pico = Picoscope()
+psdata = pico.get_data()
+plt.plot(psdata['Time'], psdata['ChannelB'])
+plt.show()

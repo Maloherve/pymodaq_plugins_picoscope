@@ -49,13 +49,19 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
          'default':500 }
         ]
 
+
+
+
+
+
     def ini_attributes(self):
+
         self.controller: Picoscope_Wrapper = None
-
-        # TODO declare here attributes you want/need to init with a default value
-
         self.x_axis = None
         self.pico = None
+
+
+
 
     def commit_settings(self, param: Parameter):
         """Apply the consequences of a change of value in the detector settings
@@ -70,6 +76,10 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
            self.controller.your_method_to_apply_this_param_change()
 #        elif ...
         ##
+
+
+
+
 
     def ini_detector(self, controller=None):
         """Detector communication initialization
@@ -87,35 +97,44 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
             False if initialization failed otherwise True
         """
 
-        raise NotImplemented  # TODO when writing your own plugin remove this line and modify the one below
-        self.ini_detector_init(slave_controller=controller)
+        self.controller = Picoscope_Wrapper()  #instantiate you driver with whatever arguments are needed
 
-        if self.is_master:
-            self.controller = PythonWrapperOfYourInstrument()  #instantiate you driver with whatever arguments are needed
-            self.controller.open_communication() # call eventual methods
 
-        ## TODO for your custom plugin
-        # get the x_axis (you may want to to this also in the commit settings if x_axis may have changed
-        data_x_axis = self.controller.your_method_to_get_the_x_axis()  # if possible
-        self.x_axis = Axis(data=data_x_axis, label='', units='', index=0)
 
-        # TODO for your custom plugin. Initialize viewers pannel with the future type of data
-        self.dte_signal_temp.emit(DataToExport(name='myplugin',
-                                               data=[DataFromPlugins(name='Mock1',
-                                                                     data=[np.array([0., 0., ...]),
-                                                                           np.array([0., 0., ...])],
-                                                                     dim='Data1D', labels=['Mock1', 'label2'],
-                                                                     axes=[self.x_axis])]))
 
-        info = "Whatever info you want to log"
+
+
+
+        # # raise NotImplemented  # TODO when writing your own plugin remove this line and modify the one below
+        # self.ini_detector_init(slave_controller=controller)
+
+        # if self.is_master:
+        #     self.controller = Picoscope_Wrapper()  #instantiate you driver with whatever arguments are needed
+        #     self.controller.open_communication() # call eventual methods
+
+        # ## TODO for your custom plugin
+        # # get the x_axis (you may want to to this also in the commit settings if x_axis may have changed
+        # data_x_axis = self.controller.your_method_to_get_the_x_axis()  # if possible
+        # self.x_axis = Axis(data=data_x_axis, label='', units='', index=0)
+
+        # # TODO for your custom plugin. Initialize viewers pannel with the future type of data
+        # self.dte_signal_temp.emit(DataToExport(name='myplugin',
+        #                                        data=[DataFromPlugins(name='Mock1',
+        #                                                              data=[np.array([0., 0., ...]),
+        #                                                                    np.array([0., 0., ...])],
+        #                                                              dim='Data1D', labels=['Mock1', 'label2'],
+        #                                                              axes=[self.x_axis])]))
+
+        info = "Log info on Picoscope initialisation : Not coded Yet"
         initialized = True
         return info, initialized
 
     def close(self):
         """Terminate the communication protocol"""
-        ## TODO for your custom plugin
-        raise NotImplemented  # when writing your own plugin remove this line
-        #  self.controller.your_method_to_terminate_the_communication()  # when writing your own plugin replace this line
+        self.controller.__del__()
+
+
+
 
     def grab_data(self, Naverage=1, **kwargs):
         """Start a grab from the detector
@@ -128,18 +147,18 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
         kwargs: dict
             others optionals arguments
         """
-        ## TODO for your custom plugin: you should choose EITHER the synchrone or the asynchrone version following
-
         ##synchrone version (blocking function)
-        data_tot = self.controller.your_method_to_start_a_grab_snap()
-        self.dte_signal.emit(DataToExport('myplugin',
-                                          data=[DataFromPlugins(name='Mock1', data=data_tot,
-                                                                dim='Data1D', labels=['dat0', 'data1'],
-                                                                axes=[self.x_axis])]))
+        data_tot = self.controller.start_a_grab_snap()
 
-        ##asynchrone version (non-blocking function with callback)
-        self.controller.your_method_to_start_a_grab_snap(self.callback)
-        #########################################################
+        time = data_tot["Time"]
+        ChannelA = data_tot["ChannelA"]
+        ChannelB = np.array( data_tot["ChannelB"] )
+
+        dwa1D1 = DataFromPlugins(name='1. Intensity', data=ChannelB, dim='Data1D', labels='Intensity', do_plot=True)
+
+        data = DataToExport('Picoscope', data=[ dwa1D1 ])
+
+        self.dte_signal.emit(data)
 
 
     def callback(self):
