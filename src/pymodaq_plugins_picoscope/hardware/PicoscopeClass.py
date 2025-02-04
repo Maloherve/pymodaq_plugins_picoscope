@@ -15,11 +15,10 @@ class Picoscope():
         Max Sampling Freq = 80 MHz
         """
 
-        num_points = sampling_freq*1e6 *aquire_time    # Add 2 oterwise they are lost
+        self.num_points = sampling_freq*1e6 *aquire_time    # Add 2 oterwise they are lost
     
-
         self.preTriggerSamples = 100
-        self.postTriggerSamples = int( num_points - self.preTriggerSamples)
+        self.postTriggerSamples = int( self.num_points - self.preTriggerSamples)
         self.maxSamples = int(self.preTriggerSamples + self.postTriggerSamples)
         self.timebase = int( 80/sampling_freq - 1 )  # Page 24 of PG
 

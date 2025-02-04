@@ -42,11 +42,31 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
 
     """
     params = comon_parameters+[
-        {'title':'Aquisition Time (ms)',
-         'name':'aquisition_time',
-         'type':'float',
-         'value':500,
-         'default':500 }
+        {'title':'Aquisition Parameters : Need to Reload Detector if changed !!',
+         'name':'aquisition_param',
+         'type':'group',
+         'children':[        
+             {'title':'Aquisition Time (ms)', 'name':'aquisition_time', 'type':'float', 'value':10, 'default':10 },
+             {'title':'Sampling Frequency (MHz)', 'name':'sampling_freq', 'type':'float', 'value':0.2, 'default':0.2 },
+             {'title':'Trigger Channel', 'name':'trig_chan', 'type':'itemselect', 'value':dict(all_items=["A", "B"], selected=["B"])},
+             {'title':'Trigger Level (mV)', 'name':'trig_lvl', 'type':'float', 'value':500, 'default':500 } ]},
+        
+        # {'title':'Display Parameters',
+        #  'name':'display_param',
+        #  'type':'group',
+        #  'children':[        
+        #      {'title':'Aquisition Time (ms)', 'name':'aquisition_time', 'type':'float', 'value':10, 'default':10 },
+        #      {'title':'Sampling Frequency (MHz)', 'name':'sampling_freq', 'type':'float', 'value':0.2, 'default':0.2 },
+        #      {'title':'Trigger Channel', 'name':'trig_chan', 'type':'itemselect', 'value':dict(all_items=[ "A", "B"], selected=["B"])},
+        #      {'title':'Trigger Level (mV)', 'name':'trig_lvl', 'type':'float', 'value':500, 'default':500 } ]},
+
+
+        # {'title':'',
+        #  'name':'',
+        #  'type':'',
+        #  'value':,
+        #  'default': },
+
         ]
 
 
@@ -60,9 +80,6 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
         self.x_axis = None
         self.pico = None
 
-
-
-
     def commit_settings(self, param: Parameter):
         """Apply the consequences of a change of value in the detector settings
 
@@ -71,12 +88,12 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
         param: Parameter
             A given parameter (within detector_settings) whose value has been changed by the user
         """
-        ## TODO for your custom plugin
-        if param.name() == "a_parameter_you've_added_in_self.params":
-           self.controller.your_method_to_apply_this_param_change()
-#        elif ...
-        ##
 
+        print("Commit setting : ", param)
+        # if param.name() == "aquisition_time":   # TODO: Find a way to set Timebase while initialised
+        #     self.controller.set_timebase(aquire_time=self.settings.child('aquisition_param', 'aquisition_time').value())
+        # if param.name() == "samplig_freq":   # TODO: Find a way to set Timebase while initialised
+        #     self.controller.set_timebase(sampling_freq=self.settings.child('aquisition_param', 'sampling_freq').value())
 
 
 
@@ -96,34 +113,16 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
         initialized: bool
             False if initialization failed otherwise True
         """
+        print(self.settings.child('aquisition_param', 'trig_chan').value()['selected'][0])
+        trigger_channel_number = {"A":0, "B":1}[ self.settings.child('aquisition_param', 'trig_chan').value()['selected'][0] ]
+        print(trigger_channel_number)
 
-        self.controller = Picoscope_Wrapper()  #instantiate you driver with whatever arguments are needed
-
-
-
-
-
-
-
-        # # raise NotImplemented  # TODO when writing your own plugin remove this line and modify the one below
-        # self.ini_detector_init(slave_controller=controller)
-
-        # if self.is_master:
-        #     self.controller = Picoscope_Wrapper()  #instantiate you driver with whatever arguments are needed
-        #     self.controller.open_communication() # call eventual methods
-
-        # ## TODO for your custom plugin
-        # # get the x_axis (you may want to to this also in the commit settings if x_axis may have changed
-        # data_x_axis = self.controller.your_method_to_get_the_x_axis()  # if possible
-        # self.x_axis = Axis(data=data_x_axis, label='', units='', index=0)
-
-        # # TODO for your custom plugin. Initialize viewers pannel with the future type of data
-        # self.dte_signal_temp.emit(DataToExport(name='myplugin',
-        #                                        data=[DataFromPlugins(name='Mock1',
-        #                                                              data=[np.array([0., 0., ...]),
-        #                                                                    np.array([0., 0., ...])],
-        #                                                              dim='Data1D', labels=['Mock1', 'label2'],
-        #                                                              axes=[self.x_axis])]))
+        self.controller = Picoscope_Wrapper( 
+                                            aquire_time = self.settings.child('aquisition_param', 'aquisition_time').value()*1e-3,
+                                            sampling_freq = self.settings.child('aquisition_param', 'sampling_freq').value(),
+                                            trigger = self.settings.child('aquisition_param', 'trig_lvl').value(),
+                                            trigger_chan = trigger_channel_number
+                                            )  #instantiate you driver with whatever arguments are needed
 
         info = "Log info on Picoscope initialisation : Not coded Yet"
         initialized = True
@@ -151,12 +150,16 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
         data_tot = self.controller.start_a_grab_snap()
 
         time = data_tot["Time"]
-        ChannelA = data_tot["ChannelA"]
+        ChannelA = np.array( data_tot["ChannelA"] )
         ChannelB = np.array( data_tot["ChannelB"] )
 
-        dwa1D1 = DataFromPlugins(name='1. Intensity', data=ChannelB, dim='Data1D', labels='Intensity', do_plot=True)
 
-        data = DataToExport('Picoscope', data=[ dwa1D1 ])
+        # self.x_axis = self.controller.get_the_x_axis()
+        # dwa1D1 = DataFromPlugins(name='Channel A', data=ChannelA, dim='Data1D', labels=['ChannelA'], do_plot=True)
+        # dwa1D2 = DataFromPlugins(name='Channel B', data=ChannelB, dim='Data1D', labels=['ChannelB'], do_plot=True)
+        dwa1D3 = DataFromPlugins(name='Channel B', data=[ChannelA, ChannelB], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True)
+
+        data = DataToExport('Picoscope', data=[ dwa1D3 ])
 
         self.dte_signal.emit(data)
 

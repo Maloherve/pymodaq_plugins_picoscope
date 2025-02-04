@@ -18,16 +18,19 @@ class Picoscope_Wrapper:
 
     ############## My methods
 
-    def __init__(self, aquire_time=.5, sampling_freq=0.20, trigger=500) -> None:
+    def __init__(self, aquire_time=.5, sampling_freq=0.20, trigger=500, trigger_chan=1) -> None:
         """
         Max Sampling Freq = 80 MHz
         """
 
-        num_points = sampling_freq*1e6 *aquire_time 
+        self.aquire_time = aquire_time
+        self.num_points = sampling_freq*1e6 *aquire_time 
+        self.sampling_frequency = sampling_freq
     
-
         self.preTriggerSamples = 100
-        self.postTriggerSamples = int( num_points - self.preTriggerSamples)
+        self.postTriggerSamples = int( self.num_points - self.preTriggerSamples)
+        self.trigger_chan_number = trigger_chan
+
         self.maxSamples = int(self.preTriggerSamples + self.postTriggerSamples)
         self.timebase = int( 80/sampling_freq - 1 )  # Page 24 of PG
 
@@ -48,7 +51,6 @@ class Picoscope_Wrapper:
         print("Aquire Time = ", aquire_time, "s")
         print("Sampling Frequency = ", 80 / (self.timebase+1), "MHz,  Step size = ", (self.timebase+1)*12.5, " ns" )
         print("Total Points = ", self.maxSamples)
-        print("Points per pulse = ", self.maxSamples / (aquire_time*1e3))
         print("Timebase = ", self.timebase)
         print("----------")
         print()
@@ -122,11 +124,12 @@ class Picoscope_Wrapper:
         # ----- Set up simple Trigger
         handle = self.chandle
         enabled = 1
-        source = PS4000a_CHANNEL_B
+        # source = PS4000a_CHANNEL_B
+        source = self.trigger_chan_number
         threshold = mV2adc(self.trigger_threshold, self.chBRange, self.maxADC)
         direction = PS4000a_RISING = 2
         delay = 0 # s
-        autoTrigger_ms = 0 # ms  #TODO: Autotriggers after some time ?
+        autoTrigger_ms = 1 # ms  #TODO: Autotriggers after some time ?
         self.status["trigger"] = ps.ps4000aSetSimpleTrigger(handle, enabled, source, threshold, direction, delay, autoTrigger_ms )
         assert_pico_ok(self.status["trigger"])
 
@@ -178,7 +181,8 @@ class Picoscope_Wrapper:
     ############## PMD mandatory methods
 
     def get_the_x_axis(self):
-        return self.data_transfer.time_data().magnitude
+        print("Tut")
+        return 0
         # return self.data_transfer.time_data().magnitude
 
 
@@ -240,7 +244,12 @@ class Picoscope_Wrapper:
 
         return df
 
+    def set_timebase(self, aquire_time=None, sampling_freq=None):
+        if aquire_time: self.num_points = self.sampling_frequency*1e6 *aquire_time
+        elif sampling_freq: self.num_points = sampling_freq*1e6 *self.aquire_time
 
+        self.postTriggerSamples = int( self.num_points - self.preTriggerSamples)
+        self.maxSamples = int(self.preTriggerSamples + self.postTriggerSamples)
 
 
     def terminate_the_communication(self, manager, hit_except):
