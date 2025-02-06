@@ -238,11 +238,7 @@ class Picoscope_Wrapper:
         # Create time data
         time = np.linspace(0, ((cmaxSamples.value)-1) * self.timeIntervalns.value * 1e-9, cmaxSamples.value)
 
-        df = pd.DataFrame({'Time': time,
-                            'ChannelA': channelA_data,
-                            'ChannelB': channelB_data })
-
-        return df
+        return time, [np.array(channelA_data), np.array(channelB_data)]
 
     def set_timebase(self, aquire_time=None, sampling_freq=None):
         if aquire_time: self.num_points = self.sampling_frequency*1e6 *aquire_time

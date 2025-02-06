@@ -6,8 +6,9 @@ from pymodaq.utils.parameter import Parameter
 
 from ...hardware.Picoscope_wrapper import Picoscope_Wrapper
 
+import matplotlib.pyplot as plt
 
-class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
+class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
     """ Instrument plugin class for a 1D viewer.
     
     This object inherits all functionalities to communicate with PyMoDAQ’s DAQ_Viewer module through inheritance via
@@ -38,7 +39,15 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
              {'title':'Sampling Frequency (MHz)', 'name':'sampling_freq', 'type':'float', 'value':0.2, 'default':0.2 },
              {'title':'Number of Samples (kS)', 'name':'num_samples', 'type':'float', 'value':2, 'default':2, 'readonly':True },
              {'title':'Trigger Channel', 'name':'trig_chan', 'type':'itemselect', 'value':dict(all_items=["A", "B"], selected=["B"])},
-             {'title':'Trigger Level (mV)', 'name':'trig_lvl', 'type':'float', 'value':500, 'default':500 } ]},
+             {'title':'Trigger Level (mV)', 'name':'trig_lvl', 'type':'float', 'value':500, 'default':500 } 
+             ]},
+        
+        {'title':'Lock In Parameters',
+         'name':'lockin_param',
+         'type':'group',
+         'children':[        
+             {'title':'B Frequency (Hz)', 'name':'B_freq', 'type':'float', 'value':500, 'default':500 },
+             ]},
 
         ]
 
@@ -80,8 +89,6 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
             
             self.settings.child('aquisition_param', 'num_samples').setValue( num_points )
 
-
-
     def ini_detector(self, controller=None):
         """Detector communication initialization
 
@@ -115,8 +122,6 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
         self.controller.__del__()
 
 
-
-
     def grab_data(self, Naverage=1, **kwargs):
         """Start a grab from the detector
 
@@ -136,15 +141,109 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
 
 
     def process_and_show_data(self, time, channels):
-            ChannelA = channels[0]
-            ChannelB = channels[1]
+        
+        ChannelA = channels[0]
+        ChannelB = channels[1]
 
-            dwa1D3 = DataFromPlugins(name='Channel B', data=[ChannelA, ChannelB], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True)
+        # Parameters to set as Inputs for user
+        B_frequency = self.settings.child('lockin_param', 'B_freq').value() *1e-3      # kHz
+        pulse_frequency = 1 # kHz
+        
+        sampling_freq = self.settings.child('aquisition_param', 'sampling_freq').value()
+        aquire_time = self.settings.child('aquisition_param', 'aquisition_time').value()
+        num_points = self.settings.child('aquisition_param', 'num_samples').value() * 1e3
 
-            data = DataToExport('Picoscope', data=[ dwa1D3 ])
+        number_of_pulses = int(aquire_time * pulse_frequency)
+        width_of_pulse = int(num_points / number_of_pulses)
 
-            self.dte_signal.emit(data)
-    
+        number_of_B = int(aquire_time * B_frequency)
+        width_of_B = int(number_of_pulses/number_of_B)
+
+        # Reshape Data (Seperate Pulses)
+        ChannelA_reshaped = ChannelA.reshape(number_of_pulses, width_of_pulse)
+        ChannelB_reshaped = ChannelB.reshape(number_of_pulses, width_of_pulse)
+
+        # Calculate Pulses and remove background
+        ChannelA_values_reshaped = np.sum(ChannelA_reshaped[:,width_of_pulse//2:], axis=1) - np.sum(ChannelA_reshaped[:,:width_of_pulse//2], axis=1)
+        ChannelB_values_reshaped = np.sum(ChannelB_reshaped[:,width_of_pulse//2:], axis=1) - np.sum(ChannelB_reshaped[:,:width_of_pulse//2], axis=1)
+
+        # print("----")
+        # print(number_of_pulses)
+        # print(ChannelA_reshaped.shape)
+        # print("----")
+
+        # Normalise Data
+        ND = ChannelA_values_reshaped / ChannelB_values_reshaped
+        
+        # Reshape Data (Seperate Pulses)
+        ND_reshaped = ND.reshape(number_of_B, width_of_B)
+        # print()
+
+        # --- Computing ChannelB_Bd
+
+        # ChannelB_mean_over_Bs = np.sum(ChannelB_reshaped, axis=1)
+        # if len(ChannelB_mean_over_Bs)%2 !=0 :  ChannelB_mean_over_Bs = ChannelB_mean_over_Bs[:-1]
+        # ChannelB_Bd =   ChannelB_mean_over_Bs [::2] - ChannelB_mean_over_Bs [1::2]
+        # ChannelB_Bd = np.mean(ChannelB_Bd)
+
+        # # --- Computing ChannelB_Ba
+        # ChannelB_Ba = np.mean(ChannelB_mean_over_Bs)
+
+        # ##### Computing D_Bd
+        # data_diff_int_reshaped = D_a.reshape(B_pulse_number, PWb)
+        # mean_diff_over_B_pulse = np.mean(data_diff_int_reshaped, axis=1)
+        # if len(mean_diff_over_B_pulse)%2 !=0 :
+        #     mean_diff_over_B_pulse = mean_diff_over_B_pulse[:-1]
+        # D_Bd =   mean_diff_over_B_pulse [::2] - mean_diff_over_B_pulse [1::2]
+        # D_Bd = np.mean(D_Bd)
+
+        # ##### Computing D_Ba
+        # D_Ba = np.mean(mean_diff_over_B_pulse)
+
+        # #####normailizing
+        # Gain = 100
+        # normalized_D = np.divide(D_a, I_a)*1/Gain/2
+
+        # #####computing NDa
+        # NDa = np.mean(normalized_D)
+
+        # #####computing ND_Bd
+        # normalized_DB_reshaped = normalized_D.reshape(B_pulse_number, PWb)
+        # mean_normalized_DB = np.mean(normalized_DB_reshaped, axis=1)
+        # if len(mean_normalized_DB)%2 !=0 :
+        #     mean_normalized_DB = mean_normalized_DB[:-1]
+        # normalized_D_BD = mean_normalized_DB[::2] - mean_normalized_DB[1::2]
+        # ND_Bd = np.mean(normalized_D_BD)
+
+        # #####computing ND_Ba
+        # ND_Ba = np.mean(mean_normalized_DB)
+
+
+        # ##### Computing phi_Ba
+        # Conversion = 2
+        # phi_Ba = ND_Ba * Conversion
+        # ##### Computing phi_Bd
+        # # application of gain and conversion
+
+        # phi_Bd = ND_Bd*Conversion
+
+
+
+        # Ref = np.ones(ChannelB_reshaped.shape) * ChannelB.max()
+        # Ref[1::2] = 0
+        # Ref = Ref.reshape(Ref.size,)
+ 
+
+
+        dwa1D0 = DataFromPlugins(name='Channel B', data=[ChannelA, ChannelB], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True)
+        # dwa1D0 = DataFromPlugins(name='Channel B', data=[ChannelA, ChannelB, Ref], dim='Data1D', labels=['Channel A', 'Channel B', "LockIn Reference"], do_plot=True)
+        
+        # dwa1D1 = DataFromPlugins(name='Channel B_Bd', data=ChannelB_Bd , dim='Data1D', labels=['Channel B_Bd'], do_plot=True)
+
+        data = DataToExport('Picoscope', data=[ dwa1D0 ])
+
+        self.dte_signal.emit(data)
+
 
 
 
