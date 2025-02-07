@@ -146,7 +146,8 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
         ChannelB = channels[1]
 
         # Parameters to set as Inputs for user
-        B_frequency = self.settings.child('lockin_param', 'B_freq').value() *1e-3      # kHz
+        B_frequency = self.settings.child('lockin_param', 'B_freq').value() * 1e-3      # kHz
+        B_frequency *= 2 # We want to seperate by how steps, not periods
         pulse_frequency = 1 # kHz
         
         sampling_freq = self.settings.child('aquisition_param', 'sampling_freq').value()
@@ -164,83 +165,37 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
         ChannelB_reshaped = ChannelB.reshape(number_of_pulses, width_of_pulse)
 
         # Calculate Pulses and remove background
-        ChannelA_values_reshaped = np.sum(ChannelA_reshaped[:,width_of_pulse//2:], axis=1) - np.sum(ChannelA_reshaped[:,:width_of_pulse//2], axis=1)
-        ChannelB_values_reshaped = np.sum(ChannelB_reshaped[:,width_of_pulse//2:], axis=1) - np.sum(ChannelB_reshaped[:,:width_of_pulse//2], axis=1)
-
-        # print("----")
-        # print(number_of_pulses)
-        # print(ChannelA_reshaped.shape)
-        # print("----")
+        ChannelA_values = np.sum(ChannelA_reshaped[:,width_of_pulse//2:], axis=1) - np.sum(ChannelA_reshaped[:,:width_of_pulse//2], axis=1)
+        ChannelB_values = np.sum(ChannelB_reshaped[:,width_of_pulse//2:], axis=1) - np.sum(ChannelB_reshaped[:,:width_of_pulse//2], axis=1)
 
         # Normalise Data
-        ND = ChannelA_values_reshaped / ChannelB_values_reshaped
+        ND = ChannelA_values / ChannelB_values
         
         # Reshape Data (Seperate Pulses)
         ND_reshaped = ND.reshape(number_of_B, width_of_B)
-        # print()
 
-        # --- Computing ChannelB_Bd
+        # Compute ND_a
+        ND_a = np.mean( ND_reshaped )
 
-        # ChannelB_mean_over_Bs = np.sum(ChannelB_reshaped, axis=1)
-        # if len(ChannelB_mean_over_Bs)%2 !=0 :  ChannelB_mean_over_Bs = ChannelB_mean_over_Bs[:-1]
-        # ChannelB_Bd =   ChannelB_mean_over_Bs [::2] - ChannelB_mean_over_Bs [1::2]
-        # ChannelB_Bd = np.mean(ChannelB_Bd)
+        # Compute ND_Bd
+        if len(ND_reshaped)%2 !=0 : ND_reshaped = ND_reshaped[:-1]
+        ND_Bd = np.mean( ND_reshaped[::2] - ND_reshaped[1::2] )
 
-        # # --- Computing ChannelB_Ba
-        # ChannelB_Ba = np.mean(ChannelB_mean_over_Bs)
-
-        # ##### Computing D_Bd
-        # data_diff_int_reshaped = D_a.reshape(B_pulse_number, PWb)
-        # mean_diff_over_B_pulse = np.mean(data_diff_int_reshaped, axis=1)
-        # if len(mean_diff_over_B_pulse)%2 !=0 :
-        #     mean_diff_over_B_pulse = mean_diff_over_B_pulse[:-1]
-        # D_Bd =   mean_diff_over_B_pulse [::2] - mean_diff_over_B_pulse [1::2]
-        # D_Bd = np.mean(D_Bd)
-
-        # ##### Computing D_Ba
-        # D_Ba = np.mean(mean_diff_over_B_pulse)
-
-        # #####normailizing
-        # Gain = 100
-        # normalized_D = np.divide(D_a, I_a)*1/Gain/2
-
-        # #####computing NDa
-        # NDa = np.mean(normalized_D)
-
-        # #####computing ND_Bd
-        # normalized_DB_reshaped = normalized_D.reshape(B_pulse_number, PWb)
-        # mean_normalized_DB = np.mean(normalized_DB_reshaped, axis=1)
-        # if len(mean_normalized_DB)%2 !=0 :
-        #     mean_normalized_DB = mean_normalized_DB[:-1]
-        # normalized_D_BD = mean_normalized_DB[::2] - mean_normalized_DB[1::2]
-        # ND_Bd = np.mean(normalized_D_BD)
-
-        # #####computing ND_Ba
-        # ND_Ba = np.mean(mean_normalized_DB)
+        # Plot a reference of the B
+        Ref = np.ones( (number_of_B, int(width_of_B * width_of_pulse) ) ) * ChannelB.max()
+        Ref[1::2] = 0; Ref = Ref.reshape(Ref.size,)
 
 
-        # ##### Computing phi_Ba
-        # Conversion = 2
-        # phi_Ba = ND_Ba * Conversion
-        # ##### Computing phi_Bd
-        # # application of gain and conversion
-
-        # phi_Bd = ND_Bd*Conversion
-
-
-
-        # Ref = np.ones(ChannelB_reshaped.shape) * ChannelB.max()
-        # Ref[1::2] = 0
-        # Ref = Ref.reshape(Ref.size,)
- 
-
-
-        dwa1D0 = DataFromPlugins(name='Channel B', data=[ChannelA, ChannelB], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True)
-        # dwa1D0 = DataFromPlugins(name='Channel B', data=[ChannelA, ChannelB, Ref], dim='Data1D', labels=['Channel A', 'Channel B', "LockIn Reference"], do_plot=True)
+        # --- Plot the Data 
+        # 1D Data Plots
+        DataPlot_Trace = DataFromPlugins(name='Raw Trace', data=[ChannelA, ChannelB, Ref], dim='Data1D', labels=['Channel A', 'Channel B', "LockIn Reference"], do_plot=True)
+        DataPlot_Integrated = DataFromPlugins(name='Integrated and Background Removed', data=[ ChannelA_values, ChannelB_values ], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True)
         
-        # dwa1D1 = DataFromPlugins(name='Channel B_Bd', data=ChannelB_Bd , dim='Data1D', labels=['Channel B_Bd'], do_plot=True)
+        # 0D Data Plots
+        DataPlot_ND_Bd = DataFromPlugins(name='ND_Bd', data= ND_Bd,  dim='Data0D', labels=['ND_Bd'], do_plot=True)
+        
 
-        data = DataToExport('Picoscope', data=[ dwa1D0 ])
+        data = DataToExport('Picoscope', data=[ DataPlot_Trace , DataPlot_Integrated, DataPlot_ND_Bd])
 
         self.dte_signal.emit(data)
 
