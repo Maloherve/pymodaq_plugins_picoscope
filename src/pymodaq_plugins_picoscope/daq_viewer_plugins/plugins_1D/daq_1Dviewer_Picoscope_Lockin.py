@@ -147,7 +147,7 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
 
         # Parameters to set as Inputs for user
         B_frequency = self.settings.child('lockin_param', 'B_freq').value() * 1e-3      # kHz
-        B_frequency *= 2 # We want to seperate by how steps, not periods
+        B_frequency *= 2 # We want to seperate by steps, not periods
         pulse_frequency = 1 # kHz
         
         sampling_freq = self.settings.child('aquisition_param', 'sampling_freq').value()
@@ -195,6 +195,7 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
         DataPlot_ND_Bd = DataFromPlugins(name='ND_Bd', data= ND_Bd,  dim='Data0D', labels=['ND_Bd'], do_plot=True)
         
 
+        # --- Export the Data 
         data = DataToExport('Picoscope', data=[ DataPlot_Trace , DataPlot_Integrated, DataPlot_ND_Bd])
 
         self.dte_signal.emit(data)
