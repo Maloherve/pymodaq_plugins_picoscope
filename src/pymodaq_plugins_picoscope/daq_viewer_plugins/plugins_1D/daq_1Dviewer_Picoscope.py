@@ -4,8 +4,8 @@ from pymodaq.utils.data import DataFromPlugins, Axis, DataToExport
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.utils.parameter import Parameter
 
-from ...hardware.Picoscope4000_wrapper import Picoscope_Wrapper
-# from ...hardware.Picoscope4000a_wrapper import Picoscope_Wrapper
+from ...hardware.Picoscope4000_wrapper import Picoscope_Wrapper as Picoscope_Wrapper4000
+from ...hardware.Picoscope4000a_wrapper import Picoscope_Wrapper as Picoscope_Wrapper4000a
 
 
 class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
@@ -31,6 +31,12 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
 
     """
     params = comon_parameters+[
+        {"title": "Picoscope Series Version",
+         "name": "pico_type",
+         "type": "itemselect",
+         "value": dict(all_items=["Picoscope 4000", "Picoscope 4000a"], selected=["Picoscope 4000a"])
+        } ,
+        
         {'title':'Aquisition Parameters : Need to Reload Detector if changed !!',
          'name':'aquisition_param',
          'type':'group',
@@ -49,7 +55,10 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
 
 
     def ini_attributes(self):
-        self.controller: Picoscope_Wrapper = None
+
+        if self.settings.child('pico_type').value()["selected"][0] == "Picoscope 4000": self.controller: Picoscope_Wrapper4000 = None
+        elif self.settings.child('pico_type').value()["selected"][0] == "Picoscope 4000a": self.controller: Picoscope_Wrapper4000a = None
+        
         self.x_axis = None
         self.pico = None
 
@@ -100,12 +109,27 @@ class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
         """
         trigger_channel_number = {"A":0, "B":1}[ self.settings.child('aquisition_param', 'trig_chan').value()['selected'][0] ]
 
-        self.controller = Picoscope_Wrapper( 
-                                            aquire_time = self.settings.child('aquisition_param', 'aquisition_time').value()*1e-3,
-                                            sampling_freq = self.settings.child('aquisition_param', 'sampling_freq').value(),
-                                            trigger = self.settings.child('aquisition_param', 'trig_lvl').value(),
-                                            trigger_chan = trigger_channel_number
-                                            )  #instantiate you driver with whatever arguments are needed
+        print(self.settings.child('pico_type'))
+        print(self.settings.child('pico_type').value())
+        print(self.settings.child('pico_type').value()["selected"][0])
+        if self.settings.child('pico_type').value()["selected"][0] == "Picoscope 4000":
+            print("Initialise 4000")
+            self.controller = Picoscope_Wrapper4000( 
+                                                aquire_time = self.settings.child('aquisition_param', 'aquisition_time').value()*1e-3,
+                                                sampling_freq = self.settings.child('aquisition_param', 'sampling_freq').value(),
+                                                trigger = self.settings.child('aquisition_param', 'trig_lvl').value(),
+                                                trigger_chan = trigger_channel_number
+                                                )  #instantiate you driver with whatever arguments are needed
+        elif self.settings.child('pico_type').value()["selected"][0] == "Picoscope 4000a": 
+            print("Initialise 4000a")
+            self.controller = Picoscope_Wrapper4000a( 
+                                    aquire_time = self.settings.child('aquisition_param', 'aquisition_time').value()*1e-3,
+                                    sampling_freq = self.settings.child('aquisition_param', 'sampling_freq').value(),
+                                    trigger = self.settings.child('aquisition_param', 'trig_lvl').value(),
+                                    trigger_chan = trigger_channel_number
+                                    )  #instantiate you driver with whatever arguments are needed
+        else: 
+            print("Problem +")
 
         info = "Log info on Picoscope initialisation : Not coded Yet"
         initialized = True
