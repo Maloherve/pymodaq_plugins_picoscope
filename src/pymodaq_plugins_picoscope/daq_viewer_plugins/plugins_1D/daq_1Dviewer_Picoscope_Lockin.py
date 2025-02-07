@@ -4,7 +4,7 @@ from pymodaq.utils.data import DataFromPlugins, Axis, DataToExport
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.utils.parameter import Parameter
 
-from ...hardware.Picoscope_wrapper import Picoscope_Wrapper
+from ...hardware.Picoscope4000_wrapper import Picoscope_Wrapper
 
 import matplotlib.pyplot as plt
 
@@ -180,7 +180,7 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
         # Compute ND_Bd
         if len(ND_reshaped)%2 !=0 : ND_reshaped = ND_reshaped[:-1]
         ND_Bd = np.mean( ND_reshaped[::2] - ND_reshaped[1::2] )
-
+        
         # Plot a reference of the B
         Ref = np.ones( (number_of_B, int(width_of_B * width_of_pulse) ) ) * ChannelB.max()
         Ref[1::2] = 0; Ref = Ref.reshape(Ref.size,)
@@ -196,7 +196,7 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
         
 
         # --- Export the Data 
-        data = DataToExport('Picoscope', data=[ DataPlot_Trace , DataPlot_Integrated, DataPlot_ND_Bd])
+        data = DataToExport('Picoscope', data=[ DataPlot_Trace, DataPlot_ND_Bd])
 
         self.dte_signal.emit(data)
 

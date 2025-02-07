@@ -4,7 +4,8 @@ from pymodaq.utils.data import DataFromPlugins, Axis, DataToExport
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.utils.parameter import Parameter
 
-from ...hardware.Picoscope_wrapper import Picoscope_Wrapper
+from ...hardware.Picoscope4000_wrapper import Picoscope_Wrapper
+# from ...hardware.Picoscope4000a_wrapper import Picoscope_Wrapper
 
 
 class DAQ_1DViewer_Picoscope(DAQ_Viewer_base):
