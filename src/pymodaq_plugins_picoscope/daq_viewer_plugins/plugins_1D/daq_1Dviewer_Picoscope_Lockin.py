@@ -45,6 +45,18 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
          'children':[        
              {'title':'B Frequency (Hz)', 'name':'B_freq', 'type':'float', 'value':500, 'default':500 },
              ]},
+            
+        {'title':'Display Parameters',
+         'name':'display_param',
+         'type':'group',
+         'children':[
+             {'title':'Lockin Display', 'name':'lockin_display', 'type':'group', 'children':[                   
+                    {'title':'Raw Trace', 'name':'pulse_train', 'type':'led_push', 'value':False, 'default':False},
+                    {'title': 'Integrated Pulse Train', 'name': 'pulse_train_int', 'type': 'led_push', 'value': False, 'default': False},
+                    {'title': 'ND_Bd', 'name': 'ND_Bd', 'type': 'led_push', 'value': True, 'default': True},
+            ]},
+
+         ]},
 
         ]
 
@@ -215,16 +227,21 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
 
 
         # --- Plot the Data 
+        data_to_export = []
         # 1D Data Plots
-        DataPlot_Trace = DataFromPlugins(name='Raw Trace', data=[ChannelA, ChannelB, Ref], dim='Data1D', labels=['Channel A', 'Channel B', "LockIn Reference"], do_plot=True)
-        DataPlot_Integrated = DataFromPlugins(name='Integrated and Background Removed', data=[ ChannelA_values, ChannelB_values ], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True)
         
+        if self.settings.child('display_param', 'lockin_display', 'pulse_train').value(): data_to_export.append( DataFromPlugins(name='Raw Trace', data=[ChannelA, ChannelB, Ref], dim='Data1D', labels=['Channel A', 'Channel B', "LockIn Reference"], do_plot=True, do_save=True) )
+        if self.settings.child('display_param', 'lockin_display', 'pulse_train_int').value(): data_to_export.append( DataFromPlugins(name='Integrated and Background Removed', data=[ ChannelA_values, ChannelB_values ], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True) )
+        # DataPlot_Integrated = DataFromPlugins(name='Integrated and Background Removed', data=[ ChannelA_values, ChannelB_values ], dim='Data1D', labels=['Channel A', 'Channel B'], do_plot=True)
+
+
         # 0D Data Plots
-        DataPlot_ND_Bd = DataFromPlugins(name='ND_Bd', data= ND_Bd,  dim='Data0D', labels=['ND_Bd'], do_plot=True)
+        if self.settings.child('display_param', 'lockin_display', 'ND_Bd').value(): data_to_export.append( DataFromPlugins(name='ND_Bd', data= ND_Bd,  dim='Data0D', labels=['ND_Bd'], do_plot=True) )
         
 
-        # --- Export the Data 
-        data = DataToExport('Picoscope', data=[ DataPlot_Trace, DataPlot_ND_Bd])
+        # --- Export the Data
+        data = DataToExport('Picoscope', data=data_to_export)
+        
 
         self.dte_signal.emit(data)
 
