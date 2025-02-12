@@ -43,6 +43,7 @@ class DAQ_1DViewer_Picoscope_Lockin(DAQ_Viewer_base):
          'name':'lockin_param',
          'type':'group',
          'children':[        
+             {'title':'Remove Background ?', 'name':'rmv_bg', 'type':'bool_push', 'value':True, 'default':True },
              {'title':'B Frequency (Hz)', 'name':'B_freq', 'type':'float', 'value':500, 'default':500 },
              ]},
             
